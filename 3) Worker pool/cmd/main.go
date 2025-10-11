@@ -1,6 +1,7 @@
 package main
 
 import (
+	workerpool "cmd/main.go/worker-pool"
 	"fmt"
 	"math/rand"
 	"time"
@@ -16,6 +17,7 @@ type IPool interface {
 	Create()
 	Handle(Message)
 	Wait()
+	Stats()
 }
 
 var maxMessage = 10
@@ -23,7 +25,7 @@ var messagesCounter = 0
 
 func getMessage() []Message {
 	messagesCount := rand.Intn(maxMessage)
-	messages := make([]Message, messagesCount)
+	messages := make([]Message, 0, messagesCount)
 
 	for range messagesCount {
 		messagesCounter++
@@ -32,21 +34,24 @@ func getMessage() []Message {
 	return messages
 }
 func proceessMessage(workerId int, msg Message) {
-	time.Sleep(100 * time.Millisecond)
-	fmt.Printf("Worker %d ptocessed message %d", workerId, msg.Id)
+	time.Sleep(300 * time.Millisecond)
+	fmt.Printf("Worker %d ptocessed message %d\n", workerId, msg.Id)
 }
 func main() {
-	var pool IPool
-	pool = New(proceessMessage)
-	for {
-		messages := getMessage()
+	var pool IPool = workerpool.New(proceessMessage)
 
-		pool.Create()
+	pool.Create()
+	for range 15 {
+		messages := getMessage()
+		fmt.Println("\nMessages count:", messagesCounter)
 
 		for _, message := range messages {
 			pool.Handle(message)
 		}
 
-		pool.Wait()
 	}
+	pool.Wait()
+
+	pool.Stats()
+	fmt.Println("Messages count:", messagesCounter)
 }
