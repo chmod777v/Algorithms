@@ -2,6 +2,7 @@ package main
 
 import (
 	workerpool "cmd/main.go/worker-pool"
+	"context"
 	"fmt"
 	"math/rand"
 	"time"
@@ -39,18 +40,25 @@ func proceessMessage(workerId int, msg Message) {
 }
 func main() {
 	var pool IPool = workerpool.New(proceessMessage)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
 
-	pool.Create()
-	for range 15 {
+l:
+	for {
+		pool.Create()
+		select {
+		case <-ctx.Done():
+			break l
+		default:
+		}
 		messages := getMessage()
 		fmt.Println("\nMessages count:", messagesCounter)
 
 		for _, message := range messages {
 			pool.Handle(message)
 		}
-
+		pool.Wait()
 	}
-	pool.Wait()
 
 	pool.Stats()
 	fmt.Println("Messages count:", messagesCounter)
