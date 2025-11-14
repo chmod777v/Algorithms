@@ -1,31 +1,49 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"sync"
+	"time"
 )
 
-func tee(
-	in <-chan int,
-) (_, _ <-chan int) {
-	out1 := make(chan int)
-	out2 := make(chan int)
+// написать функцию tee, которая будет данные из 1 канала перекладывать в n кол-во других и возвращать масив с этими каналами
+// доработать код
+// прокинуть контекст
+func tee(ctx context.Context, in <-chan int, numChans int) []chan int {
+	chans := make([]chan int, numChans)
+	for i := range numChans {
+		chans[i] = make(chan int)
+	}
 	go func() {
-		defer close(out1)
-		defer close(out2)
-		for val := range in {
-			var out1, out2 = out1, out2
-			for i := 0; i < 2; i++ {
-				select {
-				case out1 <- val:
-					out1 = nil
-				case out2 <- val:
-					out2 = nil
+		for i := range numChans {
+			defer close(chans[i])
+		}
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case val, ok := <-in:
+				if !ok {
+					return
 				}
+				wg := &sync.WaitGroup{}
+				for i := range numChans {
+					wg.Add(1)
+					go func() {
+						defer wg.Done()
+						select {
+						case <-ctx.Done():
+							return
+						case chans[i] <- val:
+						}
+					}()
+				}
+				wg.Wait()
 			}
 		}
 	}()
-	return out1, out2
+	return chans
 }
 
 func generate() chan int {
@@ -39,21 +57,36 @@ func generate() chan int {
 	}()
 	return ch
 }
-func main() {
-	ch1, ch2 := tee(generate())
+
+func service(chans []chan int) {
 	wg := &sync.WaitGroup{}
-	wg.Add(2)
+	wg.Add(3)
 	go func() {
 		defer wg.Done()
-		for v := range ch1 {
-			fmt.Println("ch1: ", v)
+		for v := range chans[0] {
+			fmt.Println("Logging... ", v)
+			time.Sleep(time.Second)
 		}
 	}()
 	go func() {
 		defer wg.Done()
-		for v := range ch2 {
-			fmt.Println("ch2: ", v)
+		for v := range chans[1] {
+			fmt.Println("Metrics... ", v)
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		for v := range chans[2] {
+			fmt.Println("Sending... ", v)
 		}
 	}()
 	wg.Wait()
+}
+
+func main() {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	chans := tee(ctx, generate(), 3)
+	service(chans) //имитация передачи масива каналов сервисам
 }
