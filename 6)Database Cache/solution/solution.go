@@ -1,4 +1,4 @@
-package main
+package cache
 
 import (
 	"sync"
@@ -18,9 +18,9 @@ import (
 var ()
 
 type KVDatabase interface {
-	Get(key string) (string, error)        // получить значение по ключу (используется пользователями очень часто)
-	Keys() ([]string, error)               // получить все ключи (используется пользователями очень редко)
-	MGet(keys []string) ([]*string, error) // получить значения по ключам (используется пользователями очень редко)
+	Get(key string) (string, error)       // получить значение по ключу (используется пользователями очень часто)
+	Keys() ([]string, error)              // получить все ключи (используется пользователями очень редко)
+	MGet(keys []string) ([]string, error) // получить значения по ключам (используется пользователями очень редко)
 }
 
 type Cache struct {
@@ -74,6 +74,6 @@ func (c *Cache) Get(key string) (string, error) {
 func (c *Cache) Keys() ([]string, error) {
 	return c.db.Keys()
 }
-func (c *Cache) MGet(keys []string) ([]*string, error) {
+func (c *Cache) MGet(keys []string) ([]string, error) {
 	return c.db.MGet(keys)
 }
