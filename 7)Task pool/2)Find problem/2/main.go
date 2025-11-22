@@ -21,11 +21,8 @@ func FindMaxProblem() {
 			ch <- msg
 		}(ch, i, &wg)
 	}
-	for {
-		select {
-		case q := <-ch:
-			fmt.Println(q)
-		}
+	for msg := range ch {
+		fmt.Println(msg)
 	}
 	wg.Wait()
 }
