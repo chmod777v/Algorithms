@@ -4,16 +4,16 @@ import "fmt"
 
 type Node struct {
 	data interface{}
+	prev *Node
 	next *Node
 }
-
 type List struct {
 	head *Node
 	tail *Node
 }
 
 func (l *List) Append(data interface{}) {
-	newNode := &Node{data: data}
+	newNode := &Node{data: data, next: nil, prev: nil}
 
 	if l.head == nil {
 		l.head = newNode
@@ -21,6 +21,7 @@ func (l *List) Append(data interface{}) {
 		return
 	} else {
 		l.tail.next = newNode
+		newNode.prev = l.tail
 		l.tail = newNode
 	}
 }
@@ -52,17 +53,14 @@ func (l *List) PrintAll() {
 	}
 }
 func main() {
-	list := &List{}
+	list := List{}
 	list.Append(0)
 	list.Append("1 Hello World!")
 	list.Append(2)
 
-	node := list.Find(2)
-	if node != nil {
+	if node := list.Find(1); node != nil {
 		fmt.Printf("%v\n\n", node.data)
 	}
 
-	//list.head.next.next.next = list.head
 	list.PrintAll()
-
 }
